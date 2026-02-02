@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PAU Biología</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script>
+        const { useState, useEffect } = React;
+        
+        function App() {
+            const [bloques, setBloques] = useState([]);
+            const [selectedBloque, setSelectedBloque] = useState(null);
+            const [questions, setQuestions] = useState([]);
+            const [question, setQuestion] = useState(null);
+            const [details, setDetails] = useState(null);
+            
+            useEffect(() => {
+                axios.get('/api/bloques').then(r => setBloques(r.data));
+            }, []);
+            
+            useEffect(() => {
+                if (selectedBloque) {
+                    axios.get(`/api/questions/by-bloque/${selectedBloque}`).then(r => {
+                        setQuestions(r.data);
+                        setQuestion(null);
+                    });
+                }
+            }, [selectedBloque]);
+            
+            useEffect(() => {
+                if (question) {
+                    axios.get(`/api/questions/${question}`).then(r => setDetails(r.data));
+                }
+            }, [question]);
+            
+            return React.createElement('div', {className: 'p-8 max-w-7xl mx-auto bg-gradient-to-br from-green-50 to-blue-50 min-h-screen'},
+                React.createElement('h1', {className: 'text-5xl font-bold text-green-700 mb-8'}, '🧬 PAU Biología 2025'),
+                React.createElement('div', {className: 'grid grid-cols-3 gap-8'},
+                    // Bloques - SIN LIMITE DE ALTURA
+                    React.createElement('div', {className: 'bg-white rounded-lg shadow-lg p-6'},
+                        React.createElement('h2', {className: 'font-bold text-xl mb-4'}, '📚 Bloques'),
+                        React.createElement('div', {className: 'space-y-2'},
+                            bloques.map(b => React.createElement('button', {
+                                key: b.id,
+                                onClick: () => setSelectedBloque(b.id),
+                                className: `block w-full p-3 rounded font-bold transition text-left text-sm ${selectedBloque === b.id ? 'bg-green-700 text-white' : 'bg-gray-100 hover:bg-gray-200'}`
+                            }, b.nombre))
+                        )
+                    ),
+                    // Preguntas
+                    React.createElement('div', {className: 'bg-white rounded-lg shadow-lg p-6 max-h-96 overflow-y-auto'},
+                        React.createElement('h2', {className: 'font-bold text-xl mb-4'}, '❓ Preguntas'),
+                        !selectedBloque && React.createElement('p', {className: 'text-gray-400'}, 'Selecciona bloque'),
+                        selectedBloque && questions.map(q => React.createElement('button', {
+                            key: q.id,
+                            onClick: () => setQuestion(q.id),
+                            className: `block w-full p-3 mb-2 rounded text-sm transition text-left ${question === q.id ? 'bg-green-700 text-white' : 'bg-gray-50 hover:bg-gray-100'}`
+                        },
+                            React.createElement('div', {className: 'flex justify-between items-center'},
+                                React.createElement('strong', {}, `P${q.question_number}`),
+                                React.createElement('span', {className: 'text-xs font-semibold'}, `${q.total_points}pts`)
+                            )
+                        ))
+                    ),
+                    // Detalle
+                    React.createElement('div', {className: 'bg-white rounded-lg shadow-lg p-6 max-h-96 overflow-y-auto'},
+                        React.createElement('h2', {className: 'font-bold text-xl mb-4'}, '📖 Detalle'),
+                        details && React.createElement('div', {className: 'space-y-3'},
+                            React.createElement('div', {className: 'flex gap-2 items-center'},
+                                React.createElement('strong', {className: 'text-lg'}, `P${details.question_number}`),
+                                React.createElement('span', {className: 'px-2 py-1 rounded bg-blue-700 text-white text-xs font-bold'}, '2025'),
+                                React.createElement('span', {className: 'px-2 py-1 rounded bg-purple-100 text-purple-800 text-xs font-bold'}, `Bloque ${details.bloque}`)
+                            ),
+                            React.createElement('div', {className: 'text-sm text-gray-800'}, details.question_text),
+                            details.image && React.createElement('img', {
+                                src: window.location.origin + details.image.image_path,
+                                alt: 'Pregunta',
+                                className: 'w-full rounded border-2 border-green-300',
+                                style: {maxHeight: '150px', objectFit: 'contain'},
+                                onError: (e) => e.target.style.display = 'none'
+                            }),
+                            details.apartados && details.apartados.length > 0 && React.createElement('div', {},
+                                React.createElement('strong', {className: 'text-sm block mb-2'}, 'Apartados:'),
+                                details.apartados.map((a, i) => React.createElement('div', {key: i, className: 'bg-gray-50 p-2 mb-1 rounded text-xs'},
+                                    React.createElement('strong', {}, `${a.apartado_letter})`),
+                                    ` ${a.apartado_text} `,
+                                    React.createElement('span', {className: 'text-gray-500'}, `(${a.points}pts)`)
+                                ))
+                            )
+                        ),
+                        !details && React.createElement('p', {className: 'text-gray-400'}, 'Selecciona pregunta')
+                    )
+                )
+            );
+        }
+        ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+    </script>
+</body>
+</html>
